@@ -147,12 +147,12 @@ export default {
     progressWidth() { return ((this.currentStep + 1) / this.steps.length) * 100; },
     currentFields() {
       const map = [[],
-      [{ key: "gender", label: "Gender", options: ["Male", "Female"] }, { key: "age", label: "Age Group", options: ["11-14", "14-18", "18-21", "21-25","25-30" , "30+"] }],
-      [{ key: "skinType", label: "Baseline Skin Type", options: ["Normal", "Oily", "Dry", "Combination"] }, { key: "fastFood", label: "Frequent High-Sugar/Fat Diet?", options: ["Yes", "No"] }],
-      [{ key: "timeSensitive", label: "Hormonal/Periodic Cycles?", options: ["Yes", "No"] }, { key: "painful", label: "Inflammatory Pain?", options: ["Yes", "No"] }],
-      [{ key: "pus", label: "Pustule Formation?", options: ["Yes", "No"] }, { key: "redness", label: "Persistent Erythema (Redness)?", options: ["Yes", "No"] }],
-      [{ key: "location", label: "Primary Cluster", options: ["T-Zone", "Forehead", "Cheeks", "Jawline/Chin"] }, { key: "allergy", label: "Known Hypersensitivities?", options: ["None", "Topical Medications", "Fragrances", "Food"] }],
-      [{ key: "longDuration", label: "Chronic (Over 3 months)?", options: ["Yes", "No"] }, { key: "pregnant", label: "Pregnant?", options: ["Yes", "No"] }, { key: "breastfeeding", label: "Breastfeeding?", options: ["Yes", "No"] }]
+      [{ key: "gender", label: "Gender", options: ["Male", "Female"] }, { key: "age", label: "Age", options: ["11-14", "14-18", "18-21", "21-25","25-30" , "30+"] }],
+      [{ key: "skinType", label: "Skin Type", options: ["Normal", "Oily", "Dry", "Combination"] }, { key: "fastFood", label: "Eat Fast Food?", options: ["Yes", "No"] }],
+      [{ key: "timeSensitive", label: "Acne worse at specific time?", options: ["Yes", "No"] }, { key: "painful", label: "Painful", options: ["Yes", "No"] }],
+      [{ key: "pus", label: "Contains pus?", options: ["Yes", "No"] }, { key: "redness", label: "Redness?", options: ["Yes", "No"] }],
+      [{ key: "location", label: "Location", options: ["T-Zone", "Forehead", "Cheeks", "Jawline/Chin"] }, { key: "allergy", label: "Allergy?", options: ["None", "Topical Medications", "Fragrances", "Food"] }],
+      [{ key: "longDuration", label: "Stays long?", options: ["Yes", "No"] }, { key: "pregnant", label: "Pregnant?", options: ["Yes", "No"] }, { key: "breastfeeding", label: "Breastfeeding?", options: ["Yes", "No"] }]
       ];
       return map[this.currentStep] || [];
     }
