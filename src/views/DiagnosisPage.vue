@@ -215,19 +215,25 @@ export default {
 
 /* 1. RESET & MASTER CONTAINER */
 .wizard-container {
-  position: relative;
-  min-height: 100vh;
-  width: 100%;
+  /* Forces the Mint color to be the absolute floor of the app */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow-y: auto; /* Enables scrolling for long forms */
+  overflow-x: hidden;
+  
   margin: 0;
   padding: 40px 20px;
-  /* Soft Medical Gradient */
-  background: linear-gradient(135deg, #F1F8F4 0%, #FFFFFF 100%);
-  background-attachment: fixed;
+  background-color: #C2E5D3 !important; 
+  
   display: flex;
   flex-direction: column;
-  align-items: center; 
-  overflow-x: hidden; /* Prevents horizontal overflow/clipping */
-  box-sizing: border-box; /* Crucial: includes padding in width calculations */
+  align-items: center;
+  box-sizing: border-box;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: #1F2F28;
 }
 
 /* 2. THE WATERMARK (Centered Background Branding) */
