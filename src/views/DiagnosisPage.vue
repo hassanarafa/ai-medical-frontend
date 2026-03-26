@@ -1,512 +1,538 @@
 <template>
   <div class="wizard-container">
-
-    <!-- PROGRESS BAR -->
-    <div class="progress-wrapper">
-      <div class="progress" :style="{ width: progressWidth + '%' }"></div>
-    </div>
-
-    <!-- STEPPER -->
-    <div class="stepper">
-      <div v-for="(step, index) in steps" :key="index" class="stepper-item"
-        :class="{ active: index === currentStep, done: index < currentStep }">
-        <span>{{ index + 1 }}</span>
+    <header class="clinic-header">
+      <img :src="clarinoLogo" alt="Clarino" class="header-logo" />
+      <div class="header-text">
+        <h1>Clarino AI</h1>
+        <span>Dermatological Analysis System</span>
       </div>
+    </header>
+
+    <div class="tracker-wrapper">
+      <div class="progress-bar">
+        <div class="progress-fill" :style="{ width: progressWidth + '%' }"></div>
+      </div>
+      <div class="steps-count">Step {{ currentStep + 1 }} of {{ steps.length }}</div>
     </div>
 
-    <!-- TITLE -->
-    <h2 class="title">{{ steps[currentStep].title }}</h2>
+    <main class="main-content">
+      <transition name="fade-transform" mode="out-in">
 
-    <!-- MAIN CARD -->
-    <div class="card">
+        <div v-if="!result" class="glass-card" :key="'wizard'">
+          <h2 class="step-title">{{ steps[currentStep].title }}</h2>
 
-      <!-- STEP CONTENT -->
-      <transition name="fade-slide" mode="out-in">
-        <div :key="currentStep" class="step">
+          <div class="step-body">
+            <template v-if="currentStep === 0">
+              <div class="upload-zone" :class="{ 'has-image': image }" @click="$refs.imageInput.click()">
+                <input ref="imageInput" type="file" accept="image/*" hidden @change="onFileChange" />
 
-          <!-- STEP 1: IMAGE UPLOAD -->
-          <template v-if="currentStep === 0">
-            <label class="label">Upload Acne Image</label>
+                <div v-if="image" class="preview-container">
+                  <img :src="image" class="image-preview" />
+                  <div class="overlay"><i class="ph ph-arrows-clockwise"></i> Tap to Change</div>
+                </div>
 
-            <div class="upload-box" @click="$refs.imageInput.click()">
-              <input ref="imageInput" type="file" accept="image/*" hidden @change="onFileChange" />
-
-              <div v-if="image" class="preview">
-                <img :src="image" />
-                <span class="change-photo">Change image</span>
+                <div v-else class="upload-prompt">
+                  <div class="icon-circle"><i class="ph ph-camera-plus"></i></div>
+                  <h3>Capture Skin Area</h3>
+                  <p>Ensure good lighting for better AI accuracy</p>
+                </div>
               </div>
+            </template>
 
-              <div v-else class="upload-placeholder">
-                <i class="ph ph-camera"></i>
-                <strong>Upload skin image</strong>
-                <small>PNG or JPG • Max 5MB</small>
+            <template v-else>
+              <div class="fields-grid">
+                <div v-for="field in currentFields" :key="field.key" class="field-item">
+                  <label>{{ field.label }}</label>
+                  <div class="select-wrapper">
+                    <select v-model="form[field.key]">
+                      <option disabled value="">Select an option...</option>
+                      <option v-for="opt in field.options" :key="opt">{{ opt }}</option>
+                    </select>
+                  </div>
+                </div>
               </div>
-            </div>
-          </template>
-
-          <!-- OTHER STEPS -->
-          <template v-else>
-            <div v-for="field in currentFields" :key="field.key" class="field">
-              <label class="label">{{ field.label }}</label>
-              <select v-model="form[field.key]" class="input">
-                <option disabled value="">Select...</option>
-                <option v-for="opt in field.options" :key="opt">
-                  {{ opt }}
-                </option>
-              </select>
-            </div>
-          </template>
-
-          <!-- FINAL STEP -->
-          <div v-if="currentStep === lastStep" class="final-step">
-            <button class="btn-diagnose" @click="submitForm" :disabled="loading">
-              <span v-if="loading">🧬 Analyzing Skin Texture...</span>
-              <span v-else>Diagnose Skin Condition</span>
-            </button>
+            </template>
           </div>
 
+          <footer class="card-footer">
+            <button v-if="currentStep > 0" class="btn-ghost" @click="prevStep">Back</button>
+
+            <div class="right-actions">
+              <button v-if="steps[currentStep].optional && currentStep < lastStep" class="btn-link" @click="skipStep">
+                Skip this step
+              </button>
+              <button v-if="currentStep < lastStep" class="btn-next" :disabled="currentStep === 0 && !image"
+                @click="nextStep">
+                Next <i class="ph ph-caret-right"></i>
+              </button>
+
+              <button v-if="currentStep === lastStep" class="btn-submit" @click="submitForm" :disabled="loading">
+                <span v-if="loading" class="spinner"></span>
+                {{ loading ? 'Analyzing...' : 'Start Diagnosis' }}
+              </button>
+            </div>
+          </footer>
+        </div>
+
+        <div v-else class="result-dashboard" :key="'result'">
+          <!-- <div class="report-header">
+            <div class="report-id">Ref: #AI-{{ Math.floor(Math.random()*10000) }}</div>
+            <button class="btn-close" @click="resetWizard">×</button>
+          </div> -->
+
+          <div class="report-grid">
+            <section class="diagnosis-section">
+              <div class="status-label">Clinical Identification</div>
+              <h2 class="condition-name">{{ result.disease }}</h2>
+              <p class="reasoning-text">{{ result.description }}</p>
+            </section>
+
+            <section class="product-recommendation">
+              <div class="product-card-inner">
+                <img :src="clarinoLogo" class="product-shot" />
+                <div class="suitability-pill" :class="result.suitability.toLowerCase()">
+                  {{ result.suitability }}
+                </div>
+                <p class="suitability-note">Clarino Treatment Recommendation</p>
+              </div>
+            </section>
+          </div>
+
+          <div class="notes-section">
+            <h4>Recommended Care Plan</h4>
+            <ul class="care-list">
+              <li v-for="(note, i) in result.recommendations" :key="i">
+                <i class="ph ph-check-circle"></i> {{ note }}
+              </li>
+            </ul>
+          </div>
+
+          <div class="report-footer">
+            <p class="legal">This analysis is AI-generated for educational guidance and does not replace professional
+              medical
+              consultation.</p>
+            <button class="btn-print" @click="window.print()"><i class="ph ph-printer"></i> Print Report</button>
+          </div>
         </div>
       </transition>
-
-      <!-- FOOTER BUTTONS -->
-      <div class="step-buttons">
-        <button v-if="currentStep > 0" class="btn-outline" @click="prevStep">
-          Back
-        </button>
-
-        <button v-if="steps[currentStep].optional && currentStep < lastStep" class="btn-skip" @click="skipStep">
-          Skip
-        </button>
-
-        <button v-if="currentStep < lastStep" class="btn-primary" :disabled="currentStep === 0 && !image"
-          @click="nextStep">
-          Next
-        </button>
-      </div>
-
-    </div>
-
-    <!-- RESULT -->
-    <transition name="fade">
-      <div v-if="result" class="result-card">
-        <h3>🩺 Diagnosis Result</h3>
-        <p class="result-note">AI-based preliminary analysis</p>
-
-        <div class="result-content" v-if="result.disease">
-          <p><strong>Disease:</strong> {{ result.disease }}</p>
-          <p><strong>Confidence:</strong> {{ result.confidence }}</p>
-
-          <p class="section-title">Description</p>
-          <p>{{ result.description }}</p>
-
-          <p class="section-title">Recommendations</p>
-          <ul>
-            <li v-for="(rec, i) in result.recommendations" :key="i">
-              {{ rec }}
-            </li>
-          </ul>
-
-          <p class="disclaimer">
-            ⚠ {{ result.medicalAdvice }}
-          </p>
-        </div>
-
-        <!-- fallback for old style or raw JSON -->
-        <pre v-else>{{ result }}</pre>
-      </div>
-    </transition>
-
+    </main>
   </div>
 </template>
 
 <script>
 import axios from "axios";
+import clarinoLogo from "../assets/logo.jpeg";
 
 export default {
   data() {
     return {
+      clarinoLogo,
       currentStep: 0,
-      steps: [
-        { title: "Upload Image", optional: false },
-        { title: "Your Profile", optional: false },
-        { title: "Skin & Food", optional: false },
-        { title: "Pain & Sensitivity", optional: false },
-        { title: "Appearance Details", optional: true },
-        { title: "Location & Allergy", optional: true },
-        { title: "Medical Conditions", optional: true },
-        { title: "Submit" }
-      ],
-      form: {
-        gender: "",
-        age: "",
-        skinType: "",
-        fastFood: "",
-        timeSensitive: "",
-        painful: "",
-        pus: "",
-        redness: "",
-        location: "",
-        allergy: "",
-        longDuration: "",
-        pregnant: "",
-        breastfeeding: ""
-      },
-      image: null,      // Used for preview (base64)
-      rawFile: null,    // The actual File object for the backend
+      loading: false,
       result: null,
-      loading: false    // Added loading state
+      image: null,
+      rawFile: null,
+      steps: [
+        { title: "Visual Input", optional: false },
+        { title: "Patient Profile", optional: false },
+        { title: "Dermal Habits", optional: false },
+        { title: "Sensitivity", optional: false },
+        { title: "Visual Markers", optional: true },
+        { title: "Allergies", optional: true },
+        { title: "Medical History", optional: true },
+        { title: "Review" }
+      ],
+      form: { gender: "", age: "", skinType: "", fastFood: "", timeSensitive: "", painful: "", pus: "", redness: "", location: "", allergy: "", longDuration: "", pregnant: "", breastfeeding: "" }
     };
   },
-
   computed: {
-    lastStep() {
-      return this.steps.length - 1;
-    },
-    progressWidth() {
-      return ((this.currentStep + 1) / this.steps.length) * 100;
-    },
+    lastStep() { return this.steps.length - 1; },
+    progressWidth() { return ((this.currentStep + 1) / this.steps.length) * 100; },
     currentFields() {
-      const map = [
-        [],
-        [
-          { key: "gender", label: "Gender", options: ["Male", "Female"] },
-          { key: "age", label: "Age", options: ["11-14", "14-18", "18-21", "21-30"] }
-        ],
-        [
-          { key: "skinType", label: "Skin Type", options: ["Normal", "Oily", "Dry", "Mixed"] },
-          { key: "fastFood", label: "Eat Fast Food?", options: ["Yes", "No"] }
-        ],
-        [
-          { key: "timeSensitive", label: "Acne worse at specific time?", options: ["Yes", "No"] },
-          { key: "painful", label: "Painful?", options: ["Yes", "No"] }
-        ],
-        [
-          { key: "pus", label: "Contains pus?", options: ["Yes", "No"] },
-          { key: "redness", label: "Redness?", options: ["Yes", "No"] }
-        ],
-        [
-          { key: "location", label: "Location", options: ["T-Zone", "Forehead", "Cheeks", "Chin"] },
-          { key: "allergy", label: "Allergy?", options: ["None", "Medicine", "Cosmetics", "Food"] }
-        ],
-        [
-          { key: "longDuration", label: "Stays long?", options: ["Yes", "No"] },
-          { key: "pregnant", label: "Pregnant?", options: ["Yes", "No"] },
-          { key: "breastfeeding", label: "Breastfeeding?", options: ["Yes", "No"] }
-        ]
+      const map = [[],
+      [{ key: "gender", label: "Gender", options: ["Male", "Female"] }, { key: "age", label: "Age Group", options: ["11-14", "14-18", "18-21", "21-30", "30+"] }],
+      [{ key: "skinType", label: "Baseline Skin Type", options: ["Normal", "Oily", "Dry", "Combination"] }, { key: "fastFood", label: "Frequent High-Sugar/Fat Diet?", options: ["Yes", "No"] }],
+      [{ key: "timeSensitive", label: "Hormonal/Periodic Cycles?", options: ["Yes", "No"] }, { key: "painful", label: "Inflammatory Pain?", options: ["Yes", "No"] }],
+      [{ key: "pus", label: "Pustule Formation?", options: ["Yes", "No"] }, { key: "redness", label: "Persistent Erythema (Redness)?", options: ["Yes", "No"] }],
+      [{ key: "location", label: "Primary Cluster", options: ["T-Zone", "Forehead", "Cheeks", "Jawline/Chin"] }, { key: "allergy", label: "Known Hypersensitivities?", options: ["None", "Topical Medications", "Fragrances", "Food"] }],
+      [{ key: "longDuration", label: "Chronic (Over 3 months)?", options: ["Yes", "No"] }, { key: "pregnant", label: "Pregnant?", options: ["Yes", "No"] }, { key: "breastfeeding", label: "Breastfeeding?", options: ["Yes", "No"] }]
       ];
       return map[this.currentStep] || [];
     }
   },
-
   methods: {
-    nextStep() {
-      if (this.currentStep < this.lastStep) this.currentStep++;
-    },
-    prevStep() {
-      if (this.currentStep > 0) this.currentStep--;
-    },
-    skipStep() {
-      this.nextStep();
-    },
+    nextStep() { if (this.currentStep < this.lastStep) this.currentStep++; },
+    prevStep() { if (this.currentStep > 0) this.currentStep--; },
+    skipStep() { this.nextStep(); },
+    resetWizard() { this.result = null; this.currentStep = 0; this.image = null; },
     async onFileChange(e) {
       const file = e.target.files[0];
       if (!file) return;
-
-      // 1. Create a preview for the UI
       const reader = new FileReader();
       reader.onload = () => (this.image = reader.result);
       reader.readAsDataURL(file);
-
-      // 2. Resize the image for the Backend (Vercel)
       this.rawFile = await this.compressImage(file);
     },
-
-    compressImage(file) {
+    async compressImage(file) {
       return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (event) => {
-          const img = new Image();
-          img.src = event.target.result;
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-
-            // Max width/height of 1600px is plenty for Gemini
-            const MAX_SIZE = 1600;
-            if (width > height) {
-              if (width > MAX_SIZE) {
-                height *= MAX_SIZE / width;
-                width = MAX_SIZE;
-              }
-            } else {
-              if (height > MAX_SIZE) {
-                width *= MAX_SIZE / height;
-                height = MAX_SIZE;
-              }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Convert back to file at 70% quality (drastically reduces MBs)
-            canvas.toBlob((blob) => {
-              resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-            }, 'image/jpeg', 0.7);
-          };
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX = 1200;
+          let w = img.width, h = img.height;
+          if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } } else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob(b => resolve(new File([b], file.name, { type: 'image/jpeg' })), 'image/jpeg', 0.8);
         };
       });
     },
     async submitForm() {
       this.loading = true;
-      this.result = null;
-
       try {
-        const formData = new FormData();
-        if (!this.rawFile) {
-          alert("Please upload an image in Step 1");
-          this.currentStep = 0;
-          return;
-        }
-        formData.append("image", this.rawFile);
-        formData.append("user_answers", JSON.stringify(this.form));
-        const res = await axios.post("https://aimedicalrepo-production.up.railway.app/analyze", formData, {
-        // const res = await axios.post("https://ai-medical-repo.vercel.app/api/analyze", formData, {
-          headers: { "Content-Type": "multipart/form-data" }
-        });
-
-        const aiResponse = res.data;
+        const fd = new FormData();
+        fd.append("image", this.rawFile);
+        fd.append("user_answers", JSON.stringify(this.form));
+        const res = await axios.post("https://aimedicalrepo-production.up.railway.app/analyze", fd);
         this.result = {
-          disease: aiResponse.diagnosis,
-          confidence: "High Definition AI Analysis",
-          description: aiResponse.reasoning,
-          recommendations: [
-            `Clarino Suitability: ${aiResponse.suitability}`,
-            aiResponse.clinical_note || "Maintain routine skin hygiene."
-          ],
-          medicalAdvice: "This result is AI-generated and for educational purposes only."
+          disease: res.data.diagnosis,
+          description: res.data.reasoning,
+          suitability: res.data.suitability,
+          recommendations: [res.data.clinical_note || "Maintain routine hygiene."],
+          medicalAdvice: "This report is AI-assisted. Consult a dermatologist for definitive diagnosis."
         };
-
-      } catch (err) {
-        console.error("Error:", err);
-        alert(err.response?.status === 413 ? "Image too large for Vercel (4.5MB limit)" : "Server error.");
-      } finally {
-        this.loading = false;
-      }
+      } catch (e) { alert("Analysis failed. Please check connection."); }
+      finally { this.loading = false; }
     }
   }
 };
 </script>
 
-<style>
-/* PAGE */
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+
+/* CLARINO BRAND COLOR PALETTE 
+  Primary: #2D5A43 (Dark Silhouette Green)
+  Secondary: #76B041 (Leaf Green)
+  Soft: #F1F8F4 (Mint Background)
+*/
+
 .wizard-container {
-  max-width: 560px;
-  margin: auto;
-  padding: 30px 16px;
-  font-family: "Poppins", sans-serif;
+  max-width: 650px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: #1F2F28; /* Dark forest grey */
 }
 
-/* PROGRESS */
-.progress-wrapper {
-  height: 7px;
-  background: #e5e7eb;
+/* CLINIC HEADER */
+.clinic-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 40px;
+}
+
+.header-logo {
+  height: 55px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(45, 90, 67, 0.15);
+}
+
+.header-text h1 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0;
+  color: #2D5A43; /* Brand Dark Green */
+}
+
+.header-text span {
+  font-size: 0.7rem;
+  color: #76B041; /* Brand Leaf Green */
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+/* PROGRESS TRACKER */
+.tracker-wrapper {
+  margin-bottom: 30px;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #E0EADD;
   border-radius: 10px;
   overflow: hidden;
+  margin-bottom: 10px;
 }
 
-.progress {
+.progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #4b6cff, #a05bff);
-  transition: width 0.4s ease;
+  background: linear-gradient(90deg, #2D5A43, #76B041);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* STEPPER */
-.stepper {
-  display: flex;
-  justify-content: space-between;
-  margin: 16px 0;
+.steps-count {
+  font-size: 0.8rem;
+  color: #5C7067;
+  font-weight: 600;
 }
 
-.stepper-item {
-  width: 34px;
-  height: 34px;
+/* THE GLASS CARD */
+.glass-card {
+  background: white;
+  border-radius: 28px;
+  padding: 40px;
+  box-shadow: 0 20px 50px rgba(45, 90, 67, 0.08); /* Green-tinted shadow */
+  border: 1px solid #E9F0E8;
+}
+
+.step-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 30px;
+  color: #2D5A43;
+}
+
+/* UPLOAD ZONE */
+.upload-zone {
+  border: 2px dashed #B5C9BE;
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #F1F8F4; /* Soft Mint */
+}
+
+.upload-zone:hover {
+  border-color: #76B041;
+  background: #E8F5E9;
+}
+
+.upload-zone.has-image {
+  padding: 10px;
+  border-style: solid;
+}
+
+.icon-circle {
+  width: 60px;
+  height: 60px;
+  background: white;
   border-radius: 50%;
-  background: #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  color: #6b7280;
+  margin: 0 auto 15px;
+  font-size: 1.5rem;
+  color: #76B041;
+  box-shadow: 0 10px 20px rgba(45, 90, 67, 0.1);
 }
 
-.stepper-item.active {
-  background: linear-gradient(135deg, #4b6cff, #a05bff);
-  color: white;
-  transform: scale(1.1);
-}
-
-.stepper-item.done {
-  background: #22c55e;
-  color: white;
-}
-
-/* CARD */
-.card {
-  background: white;
-  padding: 26px;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-}
-
-/* TITLES */
-.title {
-  text-align: center;
-  margin-bottom: 16px;
-  font-weight: 700;
-}
-
-/* STEP */
-.step {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* INPUT */
-.label {
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.input {
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #d1d5db;
-  background: #f9fafb;
-  appearance: none;
-}
-
-/* UPLOAD */
-.upload-box {
-  border: 2px dashed #b9c4ff;
+.preview-container {
+  position: relative;
   border-radius: 16px;
-  padding: 30px;
-  text-align: center;
-  cursor: pointer;
+  overflow: hidden;
 }
 
-.upload-placeholder small {
-  opacity: 0.7;
+.image-preview {
+  width: 100%;
+  max-height: 300px;
+  object-fit: cover;
 }
 
-.preview img {
-  width: 180px;
-  border-radius: 16px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-}
-
-.change-photo {
-  margin-top: 8px;
-  display: block;
+.overlay {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  background: rgba(31, 47, 40, 0.7); /* Dark green-grey overlay */
+  color: white;
+  padding: 10px;
   font-size: 0.8rem;
-  color: #4b6cff;
+  font-weight: 600;
+}
+
+/* FIELDS */
+.fields-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.field-item label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #2D5A43;
+}
+
+.select-wrapper select {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #D1DBD5;
+  background: #fff;
+  font-size: 0.95rem;
+  appearance: none;
+  transition: border-color 0.2s;
+}
+
+.select-wrapper select:focus {
+  border-color: #76B041;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(118, 176, 65, 0.1);
 }
 
 /* BUTTONS */
-.step-buttons {
-  margin-top: 24px;
+.card-footer {
   display: flex;
-  gap: 10px;
-  justify-content: center;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 40px;
 }
 
-button {
-  padding: 12px 22px;
-  border-radius: 12px;
-  font-weight: 600;
+.btn-next,
+.btn-submit {
+  padding: 14px 32px;
+  border-radius: 14px;
+  background: #2D5A43;
+  color: white;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-next:hover, .btn-submit:hover {
+  background: #76B041;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(118, 176, 65, 0.2);
+}
+
+.btn-ghost {
+  background: none;
+  border: none;
+  color: #2D5A43;
+  font-weight: 700;
+  opacity: 0.7;
   cursor: pointer;
 }
 
-.btn-primary {
-  background: linear-gradient(90deg, #4b6cff, #855cff);
-  color: white;
+.btn-link {
+  background: none;
   border: none;
-}
-
-.btn-outline {
-  border: 1px solid #4b6cff;
-  color: #4b6cff;
-  background: white;
-}
-
-.btn-skip {
-  background: #e5e7eb;
-}
-
-.btn-diagnose {
-  width: 100%;
-  background: linear-gradient(90deg, #4b6cff, #a05bff);
-  color: white;
-  border: none;
-  padding: 14px;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* RESULT */
-.result-card {
-  margin-top: 24px;
-  background: white;
-  padding: 20px;
-  border-radius: 16px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-}
-
-.result-note {
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
-.result-content p {
-  margin-bottom: 8px;
+  color: #5C7067;
   font-size: 0.9rem;
-}
-
-.section-title {
   font-weight: 600;
-  margin-top: 12px;
+  cursor: pointer;
+  padding: 10px 15px;
+  text-decoration: underline;
+  transition: color 0.2s;
 }
 
-.result-content ul {
-  padding-left: 18px;
-  font-size: 0.85rem;
+.btn-link:hover {
+  color: #76B041;
 }
 
-.disclaimer {
-  margin-top: 14px;
+.right-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* RESULT DASHBOARD */
+.result-dashboard {
+  background: white;
+  border-radius: 28px;
+  padding: 40px;
+  box-shadow: 0 30px 60px rgba(45, 90, 67, 0.12);
+}
+
+.report-id {
   font-size: 0.75rem;
-  color: #6b7280;
+  font-weight: 800;
+  color: #76B041;
+  background: #F1F8F4;
+  padding: 4px 12px;
+  border-radius: 20px;
 }
 
-/* ANIMATION */
-.fade-slide-enter-from {
-  opacity: 0;
-  transform: translateY(10px);
+.condition-name {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #2D5A43;
+  margin: 10px 0;
+  border-left: 5px solid #76B041;
+  padding-left: 15px;
 }
 
-.fade-slide-enter-active {
-  transition: 0.3s ease;
+.reasoning-text {
+  color: #4A5D54;
+  line-height: 1.6;
+  font-size: 0.95rem;
 }
 
-.fade-slide-leave-active {
-  transition: 0.25s ease;
-  opacity: 0;
+.product-card-inner {
+  background: #F1F8F4;
+  padding: 15px;
+  border-radius: 20px;
+  text-align: center;
+  border: 1px solid #E0EADD;
+}
+
+.product-shot {
+  width: 100%;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.suitability-pill {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.suitability-pill.safe {
+  background: #DCF2E1;
+  color: #1B4332;
+}
+
+.suitability-pill.unsafe {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.care-list li i {
+  color: #76B041; /* Leaf Green Checkmarks */
+}
+
+.report-footer {
+  border-top: 1px solid #E9F0E8;
+  padding-top: 30px;
+  margin-top: 30px;
+}
+
+.legal {
+  font-size: 0.75rem;
+  color: #5C7067;
+  margin-bottom: 20px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 600px) {
+  .report-grid {
+    grid-template-columns: 1fr;
+  }
+  .product-recommendation {
+    order: -1;
+  }
+  .glass-card, .result-dashboard {
+    padding: 25px;
+  }
 }
 </style>
