@@ -118,7 +118,7 @@
 
 <script>
 import axios from "axios";
-import clarinoLogo from "../assets/logo.jpeg";
+import clarinoLogo from "../assets/logo.png";
 
 export default {
   data() {
