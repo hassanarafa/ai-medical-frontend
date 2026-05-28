@@ -5,6 +5,6 @@
 </template>
 
 <script>
-import Diagnosis from "./views/DiagnosisPage.vue";
+import Diagnosis from "./views/ClarinoLanding.vue";
 export default { components: { Diagnosis } };
 </script>
