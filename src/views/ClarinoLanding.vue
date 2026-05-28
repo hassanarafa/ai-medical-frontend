@@ -124,9 +124,11 @@
         </section>
 
         <footer class="app-footer">
-            <p>&copy; 2026 Clarino Systems Inc. All rights reserved.</p>
-            <div class="footer-legal">
-                <span>Privacy Policy</span> | <span>Terms of Deployment</span> | <span>Medical Disclaimer</span>
+            <div class="footer-content">
+                <p class="footer-copyright">&copy; 2026 Clarino Systems Inc. All rights reserved.</p>
+                <div class="footer-legal">
+                    <span>Privacy Policy</span> | <span>Terms of Deployment</span> | <span>Medical Disclaimer</span>
+                </div>
             </div>
         </footer>
     </div>
@@ -582,7 +584,6 @@ export default {
 .app-footer {
     width: 100%;
     background-color: #1A2821;
-    /* Slightly deepened premium green anchor */
     border-top: 1px solid #23372D;
     box-sizing: border-box;
 }
